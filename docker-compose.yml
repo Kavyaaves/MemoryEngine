@@ -1,0 +1,38 @@
+# Everything stateful lives in the cloud (set in .env): the database is Amazon RDS for PostgreSQL,
+# media files are in a DynamoDB table, and the AI is OpenAI. Compose only runs Redis, the API,
+# the worker and the frontend.
+#
+# The one local model — sentiment (backend/app/sentiment/) — is baked into the backend image.
+# It runs on the CPU and needs about 1 GB of RAM in each container that uses it: the worker
+# (every import) and the backend (the AI Lab "Analyse" button). Give Docker at least 4 GB.
+
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redisdata:/data]
+    ports: ["127.0.0.1:6379:6379"]
+
+  backend:
+    build: ./backend
+    env_file: .env  # DATABASE_URL, OPENAI_API_KEY, AWS_* …
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    depends_on: [redis]
+    ports: ["127.0.0.1:8000:8000"]
+
+  worker:
+    build: ./backend
+    command: ["arq", "app.workers.worker.WorkerSettings"]
+    env_file: .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    depends_on: [backend]
+
+  frontend:
+    build: ./frontend
+    depends_on: [backend]
+    ports: ["127.0.0.1:8080:80"]
+
+volumes:
+  redisdata:

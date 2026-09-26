@@ -1,0 +1,7 @@
+// Copy to golden.jsonl and replace "relevant" with memory UUIDs or content hashes from your own data.
+// Categories: english | tamil | malayalam | tanglish | code_switched | multimodal | temporal | graph
+{"id": "en-1", "category": "english", "question": "when did we plan the kerala trip", "relevant": ["00000000-0000-0000-0000-000000000000"], "reference_answer": "You planned the Kerala trip on 14 June 2024."}
+{"id": "tg-1", "category": "tanglish", "question": "naan avan kooda pona trip", "relevant": ["00000000-0000-0000-0000-000000000000"]}
+{"id": "ta-1", "category": "tamil", "question": "நான் அவன் கூட போனேன்", "relevant": ["00000000-0000-0000-0000-000000000000"]}
+{"id": "tmp-1", "category": "temporal", "question": "When did I first say I love you?", "relevant": ["00000000-0000-0000-0000-000000000000"]}
+{"id": "gr-1", "category": "graph", "question": "Which people are connected to my Kerala trip?", "relevant": ["00000000-0000-0000-0000-000000000000"]}
