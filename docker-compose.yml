@@ -1,4 +1,4 @@
-# Everything stateful lives in the cloud (set in .env): the database is Amazon RDS for PostgreSQL,
+# Everything stateful lives in the cloud (set in backend/.env): the database is Amazon RDS for PostgreSQL,
 # media files are in a DynamoDB table, and the AI is OpenAI. Compose only runs Redis, the API,
 # the worker and the frontend.
 #
@@ -15,7 +15,7 @@ services:
 
   backend:
     build: ./backend
-    env_file: .env  # DATABASE_URL, OPENAI_API_KEY, AWS_* …
+    env_file: backend/.env  # DATABASE_URL, OPENAI_API_KEY, AWS_* …
     environment:
       REDIS_URL: redis://redis:6379/0
     depends_on: [redis]
@@ -24,7 +24,7 @@ services:
   worker:
     build: ./backend
     command: ["arq", "app.workers.worker.WorkerSettings"]
-    env_file: .env
+    env_file: backend/.env
     environment:
       REDIS_URL: redis://redis:6379/0
     depends_on: [backend]

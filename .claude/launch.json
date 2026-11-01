@@ -3,14 +3,16 @@
   "configurations": [
     {
       "name": "backend",
-      "runtimeExecutable": "D:\\1MY-PRO\\NewPersonal\\backend\\.venv\\Scripts\\python.exe",
-      "runtimeArgs": ["-m", "uvicorn", "app.main:app", "--port", "8000", "--app-dir", "D:\\1MY-PRO\\NewPersonal\\backend"],
+      "runtimeExecutable": "D:\\1MY-PRO\\MemoryEngine\\backend\\.venv\\Scripts\\python.exe",
+      "runtimeArgs": ["-m", "uvicorn", "app.main:app", "--port", "8000", "--app-dir", "D:\\1MY-PRO\\MemoryEngine\\backend"],
+      "cwd": "D:\\1MY-PRO\\MemoryEngine\\backend",
+      "env": { "REDIS_URL": "" },
       "port": 8000
     },
     {
       "name": "frontend",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--prefix", "D:\\1MY-PRO\\NewPersonal\\frontend"],
+      "runtimeArgs": ["run", "dev", "--prefix", "D:\\1MY-PRO\\MemoryEngine\\frontend"],
       "port": 5173,
       "autoPort": true
     }

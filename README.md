@@ -35,7 +35,7 @@ Amazon RDS: Postgres (+pgvector, pg_trgm, full-text) = source of truth · Dynamo
 Setup:
 
 1. **OpenAI:** create a key at <https://platform.openai.com/api-keys> and set `OPENAI_API_KEY`.
-   The models used are in `.env.example`; check your key can use them.
+   The models used are in `backend/.env.example`; check your key can use them.
 2. **Database:** in the RDS console, **Create database** → PostgreSQL, engine version 16 or 17. For development
    from your laptop, choose **Public access: Yes** and allow inbound port 5432 from your IP in the
    database's security group. Copy the **Endpoint** into
@@ -65,10 +65,10 @@ Once a cap is reached the app keeps working without AI (keyword search, answers 
 ## Quick start (Docker)
 
 ```bash
-cp .env.example .env
+cp backend/.env.example backend/.env
 ```
 
-Fill in the values above, then:
+Fill in the values above (Compose reads `backend/.env`, the same file local development uses), then:
 
 ```bash
 docker compose up --build
