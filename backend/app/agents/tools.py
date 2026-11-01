@@ -7,11 +7,12 @@ read another user's data.
 
 import uuid
 from datetime import datetime
+from html import escape
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import AliasStatus, Memory, Person, PersonAlias
+from app.models import AliasStatus, Event, Memory, Person, PersonAlias
 from app.multilingual.tanglish import expand_query
 from app.retrieval.address import count_address_terms
 from app.retrieval.evidence import build_evidence
@@ -20,6 +21,8 @@ from app.retrieval.hybrid import HybridRetriever, RetrievalResult
 from app.retrieval.lexical import fts_count
 from app.retrieval.query import SearchFilters
 from app.schemas.api import Evidence
+from app.universe.layout import local_date
+from app.universe.titles import format_range
 
 
 class MemoryTools:
@@ -64,6 +67,22 @@ class MemoryTools:
         ranked = [(memory_id, 1.0, [path]) for memory_id in report.example_ids()]
         evidence = await build_evidence(self.session, self.user_id, ranked, [t.term for t in report.terms])
         return report.as_fact(), evidence, report.derived_model if report.used_derived_model else None
+
+    async def event_context(self, evidence: list[Evidence], limit: int = 3) -> list[str]:
+        """Graph RAG "global" context: the AI summaries of the Memory Books the evidence comes from,
+        as clearly labelled lines for the answer prompt (context only — never cited as evidence)."""
+        book_ids = list(dict.fromkeys(e.book_id for e in evidence if e.book_id))[:limit]
+        if not book_ids:
+            return []
+        books = (await self.session.execute(select(Event).where(
+            Event.user_id == self.user_id, Event.id.in_(book_ids), Event.title_source == "ai",
+            Event.summary.is_not(None)))).scalars().all()
+        lines = []
+        for book in sorted(books, key=lambda b: book_ids.index(b.id)):
+            when = format_range(local_date(book.start_at), local_date(book.end_at))
+            lines.append(f'EVENT (AI summary of the memory book "{escape(book.title)}", {when}, '
+                         f"{book.memory_count} memories; context only): {escape(book.summary or '')}")
+        return lines
 
     async def count_memories(self, topic: str | None = None, *, start: datetime | None = None,
                              end: datetime | None = None, person_ids: list[uuid.UUID] | None = None) -> int:

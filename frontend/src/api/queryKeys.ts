@@ -40,6 +40,14 @@ export const queryKeys = {
     timeline: (params: MoodTimelineParams) => ["sentiment", "timeline", params],
     status: ["sentiment", "status"],
   },
+  universe: {
+    all: ["universe"],
+    snapshot: ["universe", "snapshot"],
+    book: (bookId: string) => ["universe", "book", bookId],
+    page: (pageId: string) => ["universe", "page", pageId],
+    memory: (memoryId: string) => ["universe", "memory", memoryId],
+    changes: (after: number) => ["universe", "changes", after],
+  },
 };
 
 /**
@@ -54,4 +62,6 @@ export function invalidateMemoryData(queryClient: QueryClient) {
   void queryClient.invalidateQueries({ queryKey: queryKeys.search.all });
   void queryClient.invalidateQueries({ queryKey: queryKeys.photos.all });
   void queryClient.invalidateQueries({ queryKey: queryKeys.sentiment.all });
+  // Refetching the universe never moves the camera: book positions come from the server and are fixed.
+  void queryClient.invalidateQueries({ queryKey: queryKeys.universe.all });
 }

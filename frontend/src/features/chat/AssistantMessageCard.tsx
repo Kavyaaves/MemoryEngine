@@ -4,6 +4,7 @@ import { memo } from "react";
 import { Card } from "@/components/ui/Card";
 import { badgeVariants } from "@/components/ui/Badge";
 import { cn } from "@/lib/cn";
+import { MemoryFoundCard } from "@/features/universe/MemoryFoundCard";
 import { AnswerText } from "./AnswerText";
 import type { AssistantMessage } from "./chatStore";
 import { ConfidenceBadge } from "./ConfidenceBadge";
@@ -50,6 +51,9 @@ export const AssistantMessageCard = memo(function AssistantMessageCard({
         </p>
       )}
       {message.status === "aborted" && <p className="mt-2 text-xs text-muted-foreground">Stopped.</p>}
+      {message.response && message.response.confidence !== "none" && message.evidence[0] && (
+        <MemoryFoundCard evidence={message.evidence[0]} />
+      )}
 
       {(message.response || evidenceCount > 0) && (
         <div className="mt-3 flex flex-wrap items-center gap-2">

@@ -7,7 +7,9 @@
       4. store media and describe standalone photos/audio   (media.py)
       5. embed the new memories                             (ai/embeddings.py)
       6. learn the user's Tanglish spellings                 (multilingual/personal_lexicon.py)
-      7. sentiment of the new memories (local model)         (sentiment/pipeline.py)
+      7. place the new memories in the Memory Universe       (universe/updater.py)
+         and give new books an AI title                      (universe/titles.py)
+      8. sentiment of the new memories (local model)         (sentiment/pipeline.py)
 
 Every step only touches *new* records, so re-uploading an updated chat export is cheap.
 A failed job keeps what it stored; retrying skips those records and continues.
@@ -32,6 +34,8 @@ from app.models import IngestionJob, JobStatus, User
 from app.multilingual.personal_lexicon import learn_from_memories
 from app.people.resolver import PersonResolver
 from app.sentiment.pipeline import analyze_memories
+from app.universe.titles import name_books
+from app.universe.updater import update_universe
 
 log = logging.getLogger(__name__)
 MEDIA_SOURCE_TYPES = ("image", "audio", "video")
@@ -66,6 +70,25 @@ async def _self_names(session: AsyncSession, job: IngestionJob) -> set[str]:
     user = await session.get(User, job.user_id)
     names = {job.options.get("self_name"), user.display_name if user else None}
     return {name for name in names if name}
+
+
+async def _update_universe_safely(session: AsyncSession, job: IngestionJob):
+    """The universe is derived data: if updating it fails, the import still succeeds and the
+    next update (another import, the worker's job, or `python -m app.universe`) catches up."""
+    try:
+        return await update_universe(session, job.user_id, job.id)
+    except Exception:
+        log.exception("universe update failed for job %s; it will catch up on the next run", job.id)
+        await session.rollback()
+        return None
+
+
+async def build_universe(user_id: uuid.UUID | str) -> None:
+    """Place memories imported before the universe existed (POST /api/universe/build), then name books."""
+    user_id = uuid.UUID(str(user_id))
+    async with SessionLocal() as session:
+        stats = await update_universe(session, user_id)
+    await name_books(user_id, prefer=[uuid.UUID(i) for i in stats.new_book_ids])
 
 
 async def run_ingestion(session: AsyncSession, job: IngestionJob) -> dict:
@@ -116,7 +139,19 @@ async def run_ingestion(session: AsyncSession, job: IngestionJob) -> dict:
     await learn_from_memories(session, job.user_id, new_memory_ids)
     await session.commit()
 
-    # 7. Sentiment (skipped gracefully when the model isn't installed; backfill catches up).
+    # 7. Memory Universe: new memories join existing books or start new ones. Saved to the job
+    #    right away, so the Upload and Memories pages show it before the (slow) sentiment step.
+    await _update_job(session, job, progress=0.9)
+    universe_stats = await _update_universe_safely(session, job)
+    if universe_stats is not None:
+        stats["universe"] = universe_stats.as_dict()
+        await _update_job(session, job, stats=dict(stats))
+        try:
+            await name_books(job.user_id, prefer=[uuid.UUID(i) for i in universe_stats.new_book_ids])
+        except Exception:  # titles are cosmetic; the books already have auto titles
+            log.exception("naming books failed for job %s", job.id)
+
+    # 8. Sentiment (skipped gracefully when the model isn't installed; backfill catches up).
     async def on_sentiment_progress(fraction: float) -> None:
         await _update_job(session, job, progress=0.9 + 0.09 * fraction)
 

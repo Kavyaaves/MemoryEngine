@@ -43,6 +43,17 @@ export interface JobStats {
   new?: number;
   skipped?: number;
   embedded?: number;
+  /** What the import changed in the Memory Universe (absent for jobs from before it existed). */
+  universe?: UniverseJobStats;
+}
+
+export interface UniverseJobStats {
+  memories_placed: number;
+  pages_created: number;
+  pages_updated: number;
+  books_created: number;
+  books_updated: number;
+  connections: number;
 }
 
 export interface Job {
@@ -102,6 +113,10 @@ export interface Evidence {
   media: MediaRef[];
   /** null: not analysed yet, or nothing to analyse (e.g. a photo without a caption). */
   sentiment?: Sentiment | null;
+  /** Where it lives in the Memory Universe; null until the universe update has placed it. */
+  book_id?: UUID | null;
+  book_title?: string | null;
+  page_id?: UUID | null;
 }
 
 export interface SearchParams {
@@ -386,6 +401,151 @@ export interface LabConfig {
   embedding_dim: number;
   reranker: string | null;
   top_k: number;
+}
+
+// ---------- Memory Universe ----------
+// Universe → years → Memory Books (events) → Memory Pages (one chat on one day) → memories.
+// Everything is derived from stored memories; positions are set once by the server and never change.
+
+export interface PersonRef {
+  id: UUID;
+  name: string;
+  /** Memories they wrote or were mentioned in. */
+  count: number;
+}
+
+/** auto = built from names and dates · ai = written by a model from the book's memories · user = renamed. */
+export type TitleSource = "auto" | "ai" | "user";
+
+export interface Book {
+  id: UUID;
+  title: string;
+  title_source: TitleSource;
+  event_type: string;
+  start_at: ISODateString;
+  end_at: ISODateString;
+  memory_count: number;
+  page_count: number;
+  photo_count: number;
+  people: PersonRef[];
+  /** World position [x, y, z]; x is time along the river. */
+  position: [number, number, number];
+  updated_at: ISODateString;
+}
+
+export interface UniverseLayout {
+  /** "2000-01-01": x = 0. */
+  origin: string;
+  units_per_day: number;
+  river_radius: number;
+}
+
+export interface UniversePeriod {
+  /** "2024" or "2024-06" */
+  period: string;
+  memory_count: number;
+  book_count: number;
+}
+
+export interface Universe {
+  layout: UniverseLayout;
+  years: UniversePeriod[];
+  months: UniversePeriod[];
+  books: Book[];
+  /** Latest change id; poll /universe/changes?after=<cursor>. */
+  cursor: number;
+  unplaced_memories: number;
+  undated_memories: number;
+}
+
+export interface MemoryPage {
+  id: UUID;
+  /** YYYY-MM-DD */
+  day: string;
+  start_at: ISODateString;
+  end_at: ISODateString;
+  memory_count: number;
+  photo_count: number;
+  people: PersonRef[];
+  preview: string;
+  thread_name: string;
+}
+
+export interface RelatedBook {
+  book: Book;
+  reason: "same_person" | "similar_memories";
+  label: string;
+}
+
+export interface BookDetail {
+  book: Book;
+  /** Only for AI titles; derived from `summary_memory_ids`. */
+  summary: string | null;
+  summary_memory_ids: UUID[];
+  places: string[];
+  pages: MemoryPage[];
+  related: RelatedBook[];
+}
+
+export interface PageDetail {
+  page: MemoryPage;
+  book_id: UUID | null;
+  book_title: string | null;
+  memories: Evidence[];
+  total: number;
+}
+
+/** The path "Visit memory" travels: Universe → year → month → book → page → memory. */
+export interface MemoryLocation {
+  memory_id: UUID;
+  year: string;
+  month: string;
+  day: string;
+  book_id: UUID;
+  book_title: string;
+  page_id: UUID;
+  position: [number, number, number];
+}
+
+export type ConnectionKind =
+  | "same_event"
+  | "same_person"
+  | "previous_mention"
+  | "later_reference"
+  | "similar"
+  | "related_photo";
+
+export interface MemoryConnection {
+  kind: ConnectionKind | (string & {});
+  label: string;
+  similarity: number | null;
+  memory: Evidence;
+  location: MemoryLocation | null;
+}
+
+export interface MemoryDetail {
+  memory: Evidence;
+  location: MemoryLocation | null;
+  /** The messages just before and after it in the same conversation (includes the memory itself). */
+  context: Evidence[];
+  connections: MemoryConnection[];
+}
+
+export type UniverseChangeKind = "book_created" | "book_grown" | "book_renamed" | "book_removed" | "connection" | "update";
+
+export interface UniverseChange {
+  id: number;
+  job_id: UUID | null;
+  kind: UniverseChangeKind | (string & {});
+  entity_type: string;
+  entity_id: UUID | null;
+  detail: Record<string, JsonValue>;
+  created_at: ISODateString;
+}
+
+export interface UniverseChanges {
+  cursor: number;
+  changes: UniverseChange[];
 }
 
 // ---------- Health ----------

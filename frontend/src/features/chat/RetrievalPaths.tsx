@@ -10,6 +10,8 @@ const PATH_STYLE: Record<string, string> = {
   graph: "bg-orange-500/15 text-orange-600 dark:text-orange-300",
   temporal: "bg-lime-500/15 text-lime-700 dark:text-lime-300",
   derived: "bg-fuchsia-500/15 text-fuchsia-700 dark:text-fuchsia-300",
+  // Graph RAG over Memory Books (backend retrieval/books.py)
+  book: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
 };
 
 export function RetrievalPaths({ paths }: { paths: RetrievalPath[] }) {

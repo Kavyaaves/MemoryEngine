@@ -14,7 +14,9 @@ from dataclasses import dataclass, field
 
 from app.retrieval.query import Candidate
 
-PATH_WEIGHTS = {"fts": 1.0, "trgm": 0.6, "vector": 1.0, "graph": 0.8, "temporal": 1.2}
+# "book" (Graph RAG, retrieval/books.py) is also semantic, so it weighs a little less than
+# "vector": a memory both find still gets the agreement bonus without meaning counting twice.
+PATH_WEIGHTS = {"fts": 1.0, "trgm": 0.6, "vector": 1.0, "graph": 0.8, "temporal": 1.2, "book": 0.8}
 
 
 @dataclass

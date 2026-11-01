@@ -11,6 +11,7 @@ import { applyTheme, useThemeStore } from "@/stores/themeStore";
 const AskPage = lazy(() => import("@/pages/Ask/AskPage"));
 const UploadPage = lazy(() => import("@/pages/Upload/UploadPage"));
 const LifePage = lazy(() => import("@/pages/Life/LifePage"));
+const MemoriesPage = lazy(() => import("@/pages/Memories/MemoriesPage"));
 const PeoplePage = lazy(() => import("@/pages/People/PeoplePage"));
 const MediaPage = lazy(() => import("@/pages/Media/MediaPage"));
 const AILabPage = lazy(() => import("@/pages/AI-Lab/AILabPage"));
@@ -29,6 +30,7 @@ export default function App() {
             <Route index element={<Navigate to="/ask" replace />} />
             <Route path="/ask" element={<AskPage />} />
             <Route path="/upload" element={<UploadPage />} />
+            <Route path="/memories" element={<MemoriesPage />} />
             <Route path="/life" element={<LifePage />} />
             <Route path="/people" element={<PeoplePage />} />
             <Route path="/people/:personId" element={<PeoplePage />} />

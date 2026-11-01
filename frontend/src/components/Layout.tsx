@@ -12,6 +12,7 @@ import {
   Orbit,
   Settings,
   Sun,
+  Telescope,
   Upload,
   Users,
 } from "lucide-react";
@@ -26,6 +27,7 @@ import { cn } from "@/lib/cn";
 
 const NAV_ITEMS = [
   { to: "/ask", label: "Ask", icon: MessageSquareText },
+  { to: "/memories", label: "Memories", icon: Telescope },
   { to: "/upload", label: "Upload", icon: Upload },
   { to: "/life", label: "Life", icon: Orbit },
   { to: "/people", label: "People", icon: Users },

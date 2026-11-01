@@ -16,6 +16,7 @@ from app.ingestion.graph_builder import conversation_edge_creator
 from app.media.storage import get_storage
 from app.models import AuditLog, Conversation, IngestionJob, MediaAsset, Memory, Relationship, Source, User
 from app.schemas.api import SourceOut
+from app.universe.updater import prune_universe
 
 router = APIRouter(prefix="/sources", tags=["sources"])
 
@@ -57,6 +58,8 @@ async def delete_source(source_id: uuid.UUID, user: User = Depends(current_user)
     await session.delete(source)  # ON DELETE CASCADE removes memories, participants, media rows
     session.add(AuditLog(user_id=user.id, action="delete_source", target=str(source_id), detail={"name": source.name}))
     await session.commit()
+    # The universe's pages and books were derived from those memories: recount them, drop empty ones.
+    await prune_universe(session, user.id)
 
     storage = get_storage()
     for key in object_keys:

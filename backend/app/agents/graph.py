@@ -54,6 +54,7 @@ class AgentState(TypedDict, total=False):
     evidence: list[Evidence]
     rerank_top_score: float | None  # the LLM reranker's best score (0..1) for this evidence, if it ran
     facts: list[str]  # things computed by SQL, e.g. "FACT: 42 memories …"
+    event_context: list[str]  # Graph RAG: AI summaries of the evidence's Memory Books (context, not evidence)
     queries: list[str]  # search queries to use (rewrites / alternatives)
     attempts: int
     sufficient: bool
@@ -159,11 +160,14 @@ async def retrieve(state: AgentState, config: RunnableConfig) -> AgentState:
             evidence = order_evidence(result.evidence, analysis.temporal_order)
             rerank_top_score, degraded = result.top_rerank_score, result.degraded
             step["detail"] = f"{len(evidence)} results via {result.path_counts}"
+        # Graph RAG: summaries of the Memory Books the top evidence belongs to (app/universe/).
+        event_context = await tools.event_context(evidence[:8])
 
     await _emit(config, "evidence", [e.model_dump(mode="json") for e in evidence])
     return {"evidence": evidence, "rerank_top_score": rerank_top_score, "person_ids": person_ids,
             "person_names": person_names, "facts": facts, "attempts": state.get("attempts", 0) + 1,
-            "degraded": state.get("degraded", False) or degraded, "derived_model": used_derived}
+            "degraded": state.get("degraded", False) or degraded, "derived_model": used_derived,
+            "event_context": event_context}
 
 
 async def verify(state: AgentState, config: RunnableConfig) -> AgentState:
@@ -222,6 +226,7 @@ def _answer_prompt(state: AgentState) -> list[tuple[str, str]]:
     user_message = "\n".join(part for part in [
         format_evidence(state.get("evidence", [])),
         "\n".join(state.get("facts", [])),
+        "\n".join(state.get("event_context", [])),
         order_note,
         people_note,
         f"Evidence confidence estimate: {state.get('confidence', 'low')}.",

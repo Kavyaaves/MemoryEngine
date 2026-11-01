@@ -88,6 +88,10 @@ class Evidence(BaseModel):
     retrieval_paths: list[str]
     media: list[MediaRef] = Field(default_factory=list)
     sentiment: SentimentOut | None = None  # None: not analysed yet, or nothing to analyse
+    # Where the memory lives in the Memory Universe (None until the universe update has placed it).
+    book_id: uuid.UUID | None = None
+    book_title: str | None = None
+    page_id: uuid.UUID | None = None
 
 
 class SearchOut(BaseModel):
@@ -258,3 +262,138 @@ class AliasFeedbackIn(BaseModel):
     alias_id: uuid.UUID
     person_id: uuid.UUID
     answer: Literal["yes", "no", "unsure"]
+
+
+# ---- Memory Universe (app/universe/, api/universe.py) ----
+
+class PersonRef(BaseModel):
+    id: uuid.UUID
+    name: str
+    count: int  # memories they wrote or were mentioned in
+
+
+class BookOut(BaseModel):
+    """A Memory Book as the 3D scene needs it."""
+
+    id: uuid.UUID
+    title: str
+    title_source: Literal["auto", "ai", "user"]
+    event_type: str
+    start_at: datetime
+    end_at: datetime
+    memory_count: int
+    page_count: int
+    photo_count: int
+    people: list[PersonRef]  # the most involved first (at most 5)
+    position: tuple[float, float, float]  # stored once when the book was created; never changes
+    updated_at: datetime
+
+
+class UniverseLayoutOut(BaseModel):
+    """The constants the client needs to draw year gates exactly where the server puts books."""
+
+    origin: str  # "2000-01-01"
+    units_per_day: float
+    river_radius: float
+
+
+class UniversePeriod(BaseModel):
+    period: str  # "2024" or "2024-06"
+    memory_count: int
+    book_count: int = 0
+
+
+class UniverseOut(BaseModel):
+    layout: UniverseLayoutOut
+    years: list[UniversePeriod]
+    months: list[UniversePeriod]
+    books: list[BookOut]
+    cursor: int  # the latest change id; poll /universe/changes?after=<cursor>
+    unplaced_memories: int  # dated memories not in the universe yet (a build is needed)
+    undated_memories: int  # memories without a date: searchable, but not placed in time
+
+
+class PageOut(BaseModel):
+    id: uuid.UUID
+    day: str  # YYYY-MM-DD
+    start_at: datetime
+    end_at: datetime
+    memory_count: int
+    photo_count: int
+    people: list[PersonRef]
+    preview: str
+    thread_name: str  # the conversation / source name, or "Photos & media"
+
+
+class RelatedBookOut(BaseModel):
+    book: BookOut
+    reason: Literal["same_person", "similar_memories"]
+    label: str  # e.g. "Rahul is in both" · "Similar conversations (0.86)"
+
+
+class BookDetailOut(BaseModel):
+    book: BookOut
+    summary: str | None
+    summary_memory_ids: list[uuid.UUID]  # the memories an AI summary was written from (empty for auto titles)
+    places: list[str]
+    pages: list[PageOut]
+    related: list[RelatedBookOut]
+
+
+class PageDetailOut(BaseModel):
+    page: PageOut
+    book_id: uuid.UUID | None
+    book_title: str | None
+    memories: list[Evidence]
+    total: int
+
+
+class MemoryLocationOut(BaseModel):
+    """The path the camera travels: Universe → year → month → book → page → memory."""
+
+    memory_id: uuid.UUID
+    year: str
+    month: str  # YYYY-MM
+    day: str  # YYYY-MM-DD
+    book_id: uuid.UUID
+    book_title: str
+    page_id: uuid.UUID
+    position: tuple[float, float, float]
+
+
+class ConnectionOut(BaseModel):
+    kind: str  # same_event | same_person | previous_mention | later_reference | similar | related_photo
+    label: str
+    similarity: float | None
+    memory: Evidence
+    location: MemoryLocationOut | None
+
+
+class MemoryDetailOut(BaseModel):
+    memory: Evidence  # the original, unmodified text with its source
+    location: MemoryLocationOut | None
+    context: list[Evidence]  # the messages just before and after it in the same conversation
+    connections: list[ConnectionOut]
+
+
+class UniverseChangeOut(ORM):
+    id: int
+    job_id: uuid.UUID | None
+    kind: str
+    entity_type: str
+    entity_id: uuid.UUID | None
+    detail: dict
+    created_at: datetime
+
+
+class UniverseChangesOut(BaseModel):
+    cursor: int
+    changes: list[UniverseChangeOut]
+
+
+class UniverseBuildOut(BaseModel):
+    status: Literal["queued", "inline"]
+
+
+class BookRenameIn(BaseModel):
+    title: str = Field(min_length=1, max_length=120)

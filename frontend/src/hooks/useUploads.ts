@@ -13,7 +13,11 @@ export function isJobRunning(job: Job): boolean {
   return job.status === "queued" || job.status === "processing";
 }
 
-export function useJobs() {
+/**
+ * The job list. Polls every 2 s while a job runs. `idlePollMs` also checks now and then while nothing
+ * runs — the Memories page uses it to notice imports started in another tab or on another device.
+ */
+export function useJobs(idlePollMs: number | false = false) {
   const queryClient = useQueryClient();
   return useQuery({
     queryKey: queryKeys.jobs,
@@ -28,8 +32,8 @@ export function useJobs() {
       }
       return jobs;
     },
-    // Poll only while something is queued/processing; returning false stops polling once all jobs are done.
-    refetchInterval: (query) => (query.state.data?.some(isJobRunning) ? JOB_POLL_INTERVAL_MS : false),
+    // Poll quickly while something is queued/processing; otherwise only if the caller asked for an idle poll.
+    refetchInterval: (query) => (query.state.data?.some(isJobRunning) ? JOB_POLL_INTERVAL_MS : idlePollMs),
   });
 }
 

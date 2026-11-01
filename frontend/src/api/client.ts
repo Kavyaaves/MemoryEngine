@@ -53,7 +53,7 @@ export function errorFromResponse(status: number, bodyText: string): ApiError {
 }
 
 interface RequestOptions {
-  method?: "GET" | "POST" | "PUT" | "DELETE";
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   /** Sent as a JSON body. */
   json?: unknown;
   query?: QueryParams;

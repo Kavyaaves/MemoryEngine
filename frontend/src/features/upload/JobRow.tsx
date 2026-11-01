@@ -56,6 +56,12 @@ export function JobRow({ job, retrying, onRetry }: JobRowProps) {
         {job.stats.new !== undefined && <span>new {formatNumber(job.stats.new)}</span>}
         {job.stats.skipped !== undefined && <span>skipped {formatNumber(job.stats.skipped)}</span>}
         {job.stats.embedded !== undefined && <span>embedded {formatNumber(job.stats.embedded)}</span>}
+        {job.stats.universe && (
+          <span title="Memory Universe: books updated · new books · new connections">
+            {job.stats.universe.books_updated} books updated · {job.stats.universe.books_created} new ·{" "}
+            {job.stats.universe.connections} connections
+          </span>
+        )}
         {running && <span>{Math.round(job.progress * 100)}%</span>}
         <span className="ml-auto">updated {formatRelative(job.updated_at)}</span>
       </div>

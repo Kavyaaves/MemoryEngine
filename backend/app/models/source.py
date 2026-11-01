@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from enum import StrEnum
 
-from sqlalchemy import DateTime, Float, ForeignKey, String, Text, UniqueConstraint, func
+from sqlalchemy import DateTime, Float, ForeignKey, Index, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -42,6 +42,8 @@ class IngestionJob(Base):
     """One uploaded file and the progress of processing it."""
 
     __tablename__ = "ingestion_jobs"
+    # "Has this user already imported this exact file?" (duplicate upload check in api/uploads.py)
+    __table_args__ = (Index("ix_ingestion_jobs_user_hash", "user_id", "file_hash"),)
 
     id: Mapped[uuid.UUID] = uuid_pk()
     user_id: Mapped[uuid.UUID] = user_fk()

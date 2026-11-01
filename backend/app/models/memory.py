@@ -30,6 +30,8 @@ class Memory(Base):
         # content_hash makes re-imports incremental: a message already stored is skipped.
         UniqueConstraint("user_id", "content_hash"),
         Index("ix_memories_user_ts", "user_id", "timestamp"),
+        # "the previous time Rahul wrote" (Memory Universe connections)
+        Index("ix_memories_user_author_ts", "user_id", "author_person_id", "timestamp"),
         Index("ix_memories_search_tsv", "search_tsv", postgresql_using="gin"),
         Index("ix_memories_search_trgm", "search_text", postgresql_using="gin",
               postgresql_ops={"search_text": "gin_trgm_ops"}),

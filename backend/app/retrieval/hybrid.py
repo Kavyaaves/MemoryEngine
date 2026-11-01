@@ -2,7 +2,8 @@
 
     search(query)
       1. expand the query          Tanglish variants + transliteration   (multilingual/)
-      2. run the search paths      fts, trgm, vector, graph, temporal    (lexical/vector/graph/temporal.py)
+      2. run the search paths      fts, trgm, vector, graph, temporal,   (lexical/vector/graph/temporal.py)
+                                   book (Graph RAG over Memory Books)     (books.py)
       3. merge them                reciprocal rank fusion                (fusion.py)
       4. rerank                    heuristic → LLM → optional diversity   (reranker.py, diversity.py)
       5. build evidence            text, source, date, media links        (evidence.py)
@@ -22,6 +23,7 @@ from app.config import get_settings
 from app.models import Memory
 from app.multilingual.normalization import normalize
 from app.multilingual.tanglish import expand_query, unique
+from app.retrieval.books import book_search
 from app.retrieval.diversity import MMR_POOL, mmr_order
 from app.retrieval.evidence import build_evidence
 from app.retrieval.fusion import FusedCandidate, rrf_fuse
@@ -33,8 +35,9 @@ from app.retrieval.temporal import temporal_search
 from app.retrieval.vector import vector_search
 from app.schemas.api import Evidence
 
-MODES = {"hybrid", "fts", "trgm", "vector", "graph"}
-ALL_PATHS = {"fts", "trgm", "vector", "graph", "temporal"}
+MODES = {"hybrid", "fts", "trgm", "vector", "graph", "book"}
+ALL_PATHS = {"fts", "trgm", "vector", "graph", "temporal", "book"}
+EMBEDDING_PATHS = {"vector", "book"}  # the paths that need the question's embedding
 MAX_QUERY_VARIANTS = 4
 LLM_RERANK_TOP_N = 20
 
@@ -121,7 +124,7 @@ class HybridRetriever:
         # Start embedding the query now (a network call), while the SQL paths run.
         # One database session can only run one query at a time, so SQL paths run in sequence.
         embedding = None
-        if "vector" in paths:
+        if paths & EMBEDDING_PATHS:
             embedding = asyncio.create_task(embed_query(self.router, " ".join(queries[:2]), filters.user_id))
         try:
             if "fts" in paths:
@@ -147,11 +150,16 @@ class HybridRetriever:
                 timer.stop("temporal")
             degraded = False
             if embedding is not None:
-                timer.start()
                 query_vector = await embedding
                 degraded = query_vector is None
-                results["vector"] = await vector_search(session, query_vector, filters, limit=per_path_limit)
-                timer.stop("vector")
+                if "vector" in paths:
+                    timer.start()
+                    results["vector"] = await vector_search(session, query_vector, filters, limit=per_path_limit)
+                    timer.stop("vector")
+                if "book" in paths:
+                    timer.start()
+                    results["book"] = await book_search(session, query_vector, filters, limit=per_path_limit)
+                    timer.stop("book")
         finally:
             if embedding is not None and not embedding.done():
                 embedding.cancel()  # a SQL path failed — don't leave the request running

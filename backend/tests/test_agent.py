@@ -111,6 +111,9 @@ class FakeTools:
         self.search_calls.append(kw)
         return RetrievalResult(evidence=list(self.evidence), path_counts={"fts": len(self.evidence)}, degraded=True)
 
+    async def event_context(self, evidence):
+        return []  # no Memory Books in these tests (see test_universe.py for Graph RAG context)
+
 
 def no_ai_router():
     s = Settings(openai_api_key=None)

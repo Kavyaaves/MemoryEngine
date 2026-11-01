@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/Badge";
 import { SourceBadge } from "@/components/SourceBadge";
 import { MediaThumb } from "@/features/media/MediaThumb";
 import { SentimentBadge } from "@/features/sentiment/SentimentBadge";
+import { VisitMemoryButton } from "@/features/universe/VisitMemoryButton";
 import type { Evidence } from "@/types/api";
 import { cn } from "@/lib/cn";
 import { formatDateTime } from "@/lib/format";
@@ -47,6 +48,7 @@ export function EvidenceCard({ evidence, citation, highlighted = false, compact 
           {evidence.source_name}
         </span>
         {evidence.sentiment && <SentimentBadge sentiment={evidence.sentiment} />}
+        {evidence.book_id && <VisitMemoryButton memoryId={evidence.memory_id} />}
         {!compact && (
           <span className="font-mono text-[11px] text-muted-foreground" title="Retrieval score">
             {Number.isFinite(evidence.score) ? evidence.score.toFixed(3) : "—"}
