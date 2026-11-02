@@ -1,0 +1,34 @@
+# AWS Free Tier setup (see docs/deploy-free.md): everything runs on one t3.micro (1 GB RAM) next to
+# the RDS database from backend/.env. OpenAI is the only paid part.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.free.yml up -d --build
+#
+# Differences from docker-compose.yml:
+# - No sentiment model: it needs ~1 GB of RAM per container, more than the whole server has.
+# - Media files go on the server's disk (EBS) instead of DynamoDB, whose on-demand capacity isn't
+#   covered by the free tier. Back up the "media" volume with the database (see the guide).
+# - Containers restart on their own after a crash or a reboot.
+
+x-backend: &backend
+  build:
+    context: ./backend
+    args: {WITH_SENTIMENT: "false"}
+  environment:
+    REDIS_URL: redis://redis:6379/0
+    STORAGE_BACKEND: local  # LOCAL_STORAGE_DIR defaults to /app/data/objects
+    SENTIMENT_ENABLED: "false"
+  volumes: [media:/app/data]
+  restart: unless-stopped
+
+services:
+  backend: *backend
+  worker: *backend  # shares the media volume: it reads the files the API stored
+
+  redis:
+    restart: unless-stopped
+
+  frontend:
+    restart: unless-stopped
+
+volumes:
+  media:

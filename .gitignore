@@ -9,3 +9,4 @@ backend/eval/*.jsonl
 backend/eval/results*.json
 frontend/node_modules/
 frontend/dist/
+*.pem
