@@ -136,11 +136,6 @@ and the question may use a different language or script than the passage — jud
 not shared words. The date and author attributes count too ("what did Rahul say in 2023?").
 Return exactly one integer per passage, in the order given."""
 
-VISION_PROMPT = """Describe this personal photo for a memory search index. Return JSON with:
-caption (1-2 sentences), people_count, objects (list), scene (e.g. beach, temple, office, home),
-text_in_image (OCR, verbatim, any script), event_clues (e.g. birthday cake, wedding, travel),
-and place_guess (null if unknown). Only describe what is visible; do not identify people by name."""
-
 # Memory Universe (app/universe/titles.py): names one Memory Book from a sample of its memories.
 BOOK_TITLE_SYSTEM = """You name one "memory book": a group of the user's own chat messages, journal
 entries and photo notes from a short period. You get the book's dates and a sample of its memories in

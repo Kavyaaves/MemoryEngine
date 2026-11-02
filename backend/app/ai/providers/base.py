@@ -17,11 +17,10 @@ T = TypeVar("T", bound=BaseModel)  # a Pydantic schema for structured output
 # What the app wants done. The router maps each task to an ordered list of providers.
 #   reasoning  – write the final answer        fast      – quick checks, reranking
 #   extraction – structured data from text     rewrite   – understand/rewrite a question
-#   vision     – describe a photo              embedding – text → vector
-#   speech     – audio → transcript
+#   embedding  – text → vector                 speech    – audio → transcript
 # "teacher" and "derived" belong to the fine-tuning phase (app/finetuning/).
-Task = Literal["reasoning", "fast", "extraction", "rewrite", "vision", "embedding", "speech",
-               "teacher", "derived"]
+# There is no vision task: photos are never sent to an AI model (ingestion/photos.py).
+Task = Literal["reasoning", "fast", "extraction", "rewrite", "embedding", "speech", "teacher", "derived"]
 
 
 class ProviderError(Exception):
@@ -93,8 +92,6 @@ class AIProvider(Protocol):
     async def structured(self, task: Task, schema: type[T], messages: Sequence[Message]) -> tuple[T, TokenUsage]: ...
 
     async def embed(self, texts: Sequence[str], *, task_type: str = "RETRIEVAL_DOCUMENT") -> list[list[float]]: ...
-
-    async def vision(self, image: bytes, mime_type: str, prompt: str, schema: type[T]) -> tuple[T, TokenUsage]: ...
 
     async def transcribe(self, audio: bytes, filename: str) -> Transcript: ...
 

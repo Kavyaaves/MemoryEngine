@@ -64,5 +64,5 @@ async def config(user: User = Depends(current_user)):
         "prompt_version": PROMPT_VERSION,
         # OpenAI's model for each task.
         "models": {"reasoning": settings.openai_reasoning_model, "fast": settings.openai_fast_model,
-                   "vision": settings.openai_vision_model, "speech": settings.openai_speech_model},
+                   "speech": settings.openai_speech_model},
     }

@@ -32,7 +32,7 @@ from app.observability.tracing import tracer
 log = logging.getLogger(__name__)
 
 DEFAULT_ROUTING: dict[str, list[str]] = {
-    task: ["openai"] for task in ("reasoning", "extraction", "fast", "rewrite", "vision", "embedding", "speech",
+    task: ["openai"] for task in ("reasoning", "extraction", "fast", "rewrite", "embedding", "speech",
                                   "teacher", "derived")
 }
 ATTEMPTS_PER_PROVIDER = 2
@@ -115,12 +115,6 @@ class AIRouter:
             return await provider.embed(texts, task_type=task_type), None
 
         return await self._call_with_fallback("embedding", call, user_id)
-
-    async def vision(self, image: bytes, mime_type: str, prompt: str, schema: type[T], *, user_id=None) -> T:
-        async def call(provider):
-            return await provider.vision(image, mime_type, prompt, schema)
-
-        return await self._call_with_fallback("vision", call, user_id)
 
     async def transcribe(self, audio: bytes, filename: str, *, user_id=None) -> Transcript:
         async def call(provider):

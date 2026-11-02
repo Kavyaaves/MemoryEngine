@@ -63,7 +63,7 @@ class Settings(BaseSettings):
     # OpenAI retires models over time; see https://platform.openai.com/docs/models for what your key can use.
     openai_reasoning_model: str = "gpt-4.1-mini"  # writes the answers
     openai_fast_model: str = "gpt-4.1-nano"  # quick jobs: understanding the question, checking evidence, reranking
-    openai_vision_model: str = "gpt-4.1-mini"  # describes uploaded photos
+    # No vision model: photos are never sent to an AI model (ingestion/photos.py).
     openai_speech_model: str = "gpt-4o-mini-transcribe"  # audio → text
     # Embeddings (text → vector for semantic search) always come from OpenAI: vectors from two
     # different models can't be compared. Changing the model after importing data makes the

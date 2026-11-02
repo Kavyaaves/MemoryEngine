@@ -1,7 +1,7 @@
-"""OpenAI: the AI provider — answers, quick checks, photo descriptions, transcripts and embeddings.
+"""OpenAI: the AI provider — answers, quick checks, transcripts and embeddings.
 
 - Chat (answers, quick checks, structured output) goes through LangChain's ChatOpenAI.
-- Embeddings, vision and transcription call the official `openai` SDK directly: our embedding
+- Embeddings and transcription call the official `openai` SDK directly: our embedding
   batching already follows OpenAI's limits, and LangChain's chat interface has no audio upload.
 Every error is converted to a ProviderError, so the router can decide whether to retry.
 
@@ -12,7 +12,6 @@ share a prefix to the same servers and so raises the cache hit rate. How many in
 served from the cache is reported in TokenUsage.cached_input_tokens (and saved to ai_usage).
 """
 
-import base64
 from collections.abc import AsyncIterator, Sequence
 
 import httpx
@@ -82,15 +81,6 @@ def embedding_batches(texts: list[str]) -> list[list[str]]:
     return [batch for batch in batches if batch]
 
 
-def sdk_token_usage(usage) -> TokenUsage:
-    """Token counts from a raw SDK response (the vision call)."""
-    if usage is None:
-        return TokenUsage()
-    details = getattr(usage, "prompt_tokens_details", None)
-    return TokenUsage(input_tokens=usage.prompt_tokens or 0, output_tokens=usage.completion_tokens or 0,
-                      cached_input_tokens=(getattr(details, "cached_tokens", 0) or 0) if details else 0)
-
-
 class OpenAIProvider:
     name = "openai"
 
@@ -108,7 +98,7 @@ class OpenAIProvider:
 
     @property
     def client(self) -> AsyncOpenAI:
-        """The raw SDK client (embeddings, vision, transcription)."""
+        """The raw SDK client (embeddings, transcription)."""
         if self._client is None:
             self._client = AsyncOpenAI(api_key=self.settings.openai_api_key, max_retries=self._max_retries,
                                        timeout=REQUEST_TIMEOUT_SECONDS, http_client=self._http_client)
@@ -118,7 +108,6 @@ class OpenAIProvider:
         models = {
             "fast": self.settings.openai_fast_model,
             "rewrite": self.settings.openai_fast_model,
-            "vision": self.settings.openai_vision_model,
             "speech": self.settings.openai_speech_model,
             "embedding": self.settings.openai_embedding_model,
             # fine-tuning phase: the labelling "teacher", and the derived model we trained ("ft:…")
@@ -183,21 +172,6 @@ class OpenAIProvider:
         if len(vectors) != len(texts):
             raise ProviderError(f"asked for {len(texts)} embeddings, got {len(vectors)}", retryable=False)
         return vectors
-
-    async def vision(self, image: bytes, mime_type: str, prompt: str, schema: type[T]) -> tuple[T, TokenUsage]:
-        model = self.settings.openai_vision_model
-        image_url = f"data:{mime_type};base64,{base64.b64encode(image).decode()}"
-        messages = [{"role": "user", "content": [{"type": "text", "text": prompt},
-                                                 {"type": "image_url", "image_url": {"url": image_url}}]}]
-        try:
-            response = await self.client.chat.completions.parse(
-                model=model, messages=messages, response_format=schema, **sampling_options(model, 0.0))
-        except Exception as exc:
-            raise classify_exception(exc) from exc
-        message = response.choices[0].message
-        if message.parsed is None:  # the model refused, or the answer was cut off
-            raise ProviderError(f"no structured output: {message.refusal or 'empty reply'}")
-        return message.parsed, sdk_token_usage(response.usage)
 
     async def transcribe(self, audio: bytes, filename: str) -> Transcript:
         model = self.settings.openai_speech_model

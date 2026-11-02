@@ -4,32 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-
-class ImageDescription(BaseModel):
-    caption: str = ""
-    people_count: int = 0
-    objects: list[str] = Field(default_factory=list)
-    scene: str | None = None
-    text_in_image: str | None = None
-    event_clues: list[str] = Field(default_factory=list)
-    place_guess: str | None = None
-
-    def as_text(self) -> str:
-        parts = [self.caption]
-        if self.scene:
-            parts.append(f"Scene: {self.scene}.")
-        if self.objects:
-            parts.append("Objects: " + ", ".join(self.objects) + ".")
-        if self.event_clues:
-            parts.append("Event clues: " + ", ".join(self.event_clues) + ".")
-        if self.place_guess:
-            parts.append(f"Possibly at: {self.place_guess} (AI-inferred).")
-        if self.text_in_image:
-            parts.append(f"Text in image: {self.text_in_image}")
-        return " ".join(p for p in parts if p)
-
-
-Intent = Literal["lookup", "temporal", "count", "person", "address", "media", "summary", "multi_hop", "chit_chat"]
+Intent =Literal["lookup", "temporal", "count", "person", "address", "media", "summary", "multi_hop", "chit_chat"]
 
 
 class QueryAnalysis(BaseModel):

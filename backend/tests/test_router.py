@@ -112,7 +112,7 @@ async def test_stream_falls_back_before_first_token():
 async def test_every_task_goes_to_openai():
     r = AIRouter([FakeProvider("openai")], UsageManager(Settings(), persist=False))
     assert (await r.generate("reasoning", [("user", "hi")])).text == "from openai"
-    for task in ("reasoning", "fast", "rewrite", "extraction", "vision", "embedding", "speech"):
+    for task in ("reasoning", "fast", "rewrite", "extraction", "embedding", "speech"):
         assert [p.name for p in r.chain(task)] == ["openai"]
 
 
